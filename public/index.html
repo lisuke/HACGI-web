@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <title>Document</title>
+    <style>
+        li {
+            /* float: left; */
+            list-style: none;
+        }
+        ul {
+            float: left;
+        }
+        .panel {
+            /* display: block; */
+            margin-left: 255px;
+            float: left;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+
+<body>
+    <script>
+        'use strict'
+        var arr = [{
+                serviceName: "aaa",
+                serviceType: "bbb",
+            },
+            {
+                serviceName: "ccc",
+                serviceType: "bbb",
+            }
+        ];
+        //创建DOM元素
+        var ul = document.createElement("ul");
+        var panel = document.createElement("div");
+        init();
+
+        function init() {
+            load(arr);
+        }
+        //加载DOM
+        function load(arr) {
+            for (var i = 0; i < arr.length; i++) {
+                addService(arr[i].serviceName, arr[i].serviceType);
+            }
+            panel.className = "panel";
+            document.body.appendChild(ul);
+            document.body.appendChild(panel);
+
+            addEvent();
+
+        }
+
+        function addService(serviceName, serviceType) {
+            var li = document.createElement("li");
+            li.innerText = serviceName;
+            li.serviceType = serviceType;
+            ul.appendChild(li);
+        }
+
+        function deleteService(serviceName) {
+            var li = document.getElementsByTagName("li");
+            for (var i = 0; i < li.length; i++) {
+                if (li[i].innerText === serviceName) {
+                    ul.removeChild(li[i]);
+                    console.log(panel.serviceName);
+                    if (panel.serviceName === serviceName){
+                        panel.innerHTML = '';
+                        panel.serviceName = '';
+                    }
+                    return;
+                }
+            }
+
+        }
+        //点击事件
+        function addEvent() {
+            ul.addEventListener("click", function (e) {
+                panel.innerHTML = "";
+                if (e.target.nodeName === "LI") {
+                    panel.serviceName = e.target.innerText;
+                    var arrInterfaces = getInterface(e.target.serviceType);
+                    for (var i = 0; i < arrInterfaces.length; i++) {
+                        var interfaceName = arrInterfaces[i];
+                        if (interfaceName === 'switch_interface') {
+                            var interfaceDiv = createSwitchInterface(e.target.innerText);
+                            panel.appendChild(interfaceDiv);
+                            interfaceDiv.init();
+                            interfaceDiv.serviceName = e.target.serviceName;
+                        }
+
+                    }
+
+                }
+            });
+        }
+        //获取liDOM属性
+        function getInterface(type) {
+            return ["switch_interface", "range_abc"];
+        }
+
+        function createSwitchInterface(serviceName) {
+            var div = document.createElement("div");
+            var label = document.createElement("label");
+            var input = document.createElement("input");
+            input.type = "checkbox";
+            div.appendChild(label);
+            div.appendChild(input);
+            div.init = function () {
+                input.checked = "checked";
+            }
+            input.onclick = function () {
+                input.checked = "";
+                console.log("aaa");
+            }
+
+            return div;
+        }
+    </script>
+</body>
+
+</html>
