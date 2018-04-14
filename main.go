@@ -22,7 +22,7 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	log.Println("HACGI-web start...")
+	log.Println("HACGI-daemon-websocket start...")
 
 	flag.Parse()
 	hub := newHub()
