@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/satori/go.uuid"
 )
 
 const (
@@ -27,6 +28,7 @@ var upgrader = websocket.Upgrader{
 }
 
 type Client struct {
+	cid  string
 	hub  *Hub
 	conn *websocket.Conn
 	send chan []byte
@@ -49,6 +51,9 @@ func (c *Client) readPump() {
 			break
 		}
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
+
+		tmp := `{"ClientId":"` + c.cid + `","Message":` + string(message) + `}`
+		message = []byte(tmp)
 		c.hub.message <- message
 	}
 }
@@ -99,9 +104,11 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	// r.ParseForm()
-	// log.Println(r.Form.Get("username"))
-	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256)}
+	r.ParseForm()
+	log.Println(r.Form.Get("username"))
+	utmp, _ := uuid.NewV4()
+	cid := utmp.String()
+	client := &Client{cid: cid, hub: hub, conn: conn, send: make(chan []byte, 256)}
 	client.hub.register <- client
 
 	go client.writePump()

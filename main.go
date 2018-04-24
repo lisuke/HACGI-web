@@ -27,7 +27,9 @@ func main() {
 	flag.Parse()
 	hub := newHub()
 	go hub.run()
+	go ServiceChanged()
 	http.HandleFunc("/", serveHome)
+	http.HandleFunc("/index.html", serveHome)
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(hub, w, r)
 	})
