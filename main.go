@@ -21,15 +21,28 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "public/home.html")
 }
 
+func serveIndex(w http.ResponseWriter, r *http.Request) {
+	log.Println(r.URL)
+	if r.URL.Path != "/index" {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	http.ServeFile(w, r, "public/index.html")
+}
+
 func main() {
 	log.Println("HACGI-daemon-websocket start...")
 
 	flag.Parse()
 	hub := newHub()
 	go hub.run()
-	go ServiceChanged()
-	http.HandleFunc("/", serveHome)
-	http.HandleFunc("/index.html", serveHome)
+	go dbus_init(hub)
+	// http.HandleFunc("/", serveHome)
+	http.HandleFunc("/index", serveIndex)
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(hub, w, r)
 	})

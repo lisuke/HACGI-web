@@ -25,24 +25,58 @@
 </head>
 
 <body>
-    <script>
-        'use strict'
-        var arr = [{
-                serviceName: "aaa",
-                serviceType: "bbb",
-            },
-            {
-                serviceName: "ccc",
-                serviceType: "bbb",
-            }
-        ];
+    <script type="text/javascript">
+    var conn;
+    window.onload = function () {
+        if (window["WebSocket"]) {
+            conn = new WebSocket("ws://" + document.location.host + "/ws"
+                +"?username=lisuke");
+            conn.onclose = function (evt) {
+                console.log("Connection closed.");
+            };
+            conn.onopen = function (evt) {
+                init();
+            };
+            conn.onmessage = function (evt) {
+                var messages = evt.data;
+                console.log(messages)
+                    var msg = JSON.parse(messages).Message.data
+                    if (msg.resource === "getAllServices") {
+                        var src=msg.Message[0][1];
+                        console.log()
+                        var arr = [];
+                        for (var i = src.length - 1; i >= 0; i--) {
+                            arr.push({
+                                serviceName: src[i][1],
+                                serviceType: src[i][0],
+                            })
+                        }
+                        load(arr)
+                    }
+            };
+        } else {
+            console.log("browser canot support WebSocket")
+        }
+    };
+
+
+        // var arr = [{
+        //         serviceName: "aaa",
+        //         serviceType: "bbb",
+        //     },
+        //     {
+        //         serviceName: "ccc",
+        //         serviceType: "bbb",
+        //     }
+        // ];
         //创建DOM元素
         var ul = document.createElement("ul");
         var panel = document.createElement("div");
-        init();
+        // init();
 
         function init() {
-            load(arr);
+            conn.send('{"reqType":"query","data":{"resource":"getAllServices"}}');
+            // load(arr);
         }
         //加载DOM
         function load(arr) {

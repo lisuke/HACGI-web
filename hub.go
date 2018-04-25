@@ -52,7 +52,7 @@ func (h *Hub) run() {
 
 			js, _ := simplejson.NewJson(message)
 			reqType, _ := js.GetPath("Message", "reqType").String()
-
+			fmt.Println(reqType)
 			switch reqType {
 			case "invoke-remote":
 				invoke(h, js)
@@ -72,18 +72,45 @@ func (h *Hub) run() {
 	}
 }
 
-func response(h *Hub, data string) {
-	tmp := []byte(`{"Message":{"reqType":"response","data":` + data + `}}`)
-	h.message <- tmp
+func responseToAll(h *Hub, data string) {
+	tmp_str := `{"Message":{"reqType":"response","data":` + data + `}}`
+	fmt.Println(tmp_str)
+	tmp_byte := []byte(tmp_str)
+	h.message <- tmp_byte
+}
+
+func responseToClientId(h *Hub, data string, clientId string) {
+	tmp_str := `{"Message":{"reqType":"response","data":` + data + `}}`
+	fmt.Println(tmp_str)
+	tmp_byte := []byte(tmp_str)
+	client := h.getClient(clientId)
+	client.send <- tmp_byte
 }
 
 func invoke(h *Hub, js *simplejson.Json) {
 	reqType, _ := js.GetPath("Message", "reqType").String()
 	data, _ := js.GetPath("Message", "data").String()
 	fmt.Println(reqType, data)
-	go response(h, `"hello world"`)
+	go responseToAll(h, `"hello world"`)
 }
 
 func query(h *Hub, js *simplejson.Json) {
+	// data, _ := js.GetPath("Message", "data").String()
+	// fmt.Println(reqType, data)
+	resource, _ := js.GetPath("Message", "data", "resource").String()
+	clientId, _ := js.GetPath("ClientId").String()
+	switch resource {
+	case "getAllServices":
+		getAllServices(h, clientId)
+	}
+	// go response(h, `"hello world"`)
+}
 
+func (h *Hub) getClient(ClientId string) *Client {
+	for client := range h.clients {
+		if client.cid == ClientId {
+			return client
+		}
+	}
+	return nil
 }
