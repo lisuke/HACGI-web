@@ -55,7 +55,7 @@ func (h *Hub) run() {
 			fmt.Println(reqType)
 			switch reqType {
 			case "invoke-remote":
-				invoke(h, js)
+				go serviceInvoke(h, js)
 			case "query":
 				query(h, js)
 			case "response":
@@ -74,24 +74,17 @@ func (h *Hub) run() {
 
 func responseToAll(h *Hub, data string) {
 	tmp_str := `{"Message":{"reqType":"response","data":` + data + `}}`
-	fmt.Println(tmp_str)
+	fmt.Println("send to: all ", tmp_str)
 	tmp_byte := []byte(tmp_str)
 	h.message <- tmp_byte
 }
 
 func responseToClientId(h *Hub, data string, clientId string) {
 	tmp_str := `{"Message":{"reqType":"response","data":` + data + `}}`
-	fmt.Println(tmp_str)
+	fmt.Println("send to: ", clientId, tmp_str)
 	tmp_byte := []byte(tmp_str)
 	client := h.getClient(clientId)
 	client.send <- tmp_byte
-}
-
-func invoke(h *Hub, js *simplejson.Json) {
-	reqType, _ := js.GetPath("Message", "reqType").String()
-	data, _ := js.GetPath("Message", "data").String()
-	fmt.Println(reqType, data)
-	go responseToAll(h, `"hello world"`)
 }
 
 func query(h *Hub, js *simplejson.Json) {
