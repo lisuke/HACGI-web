@@ -94,7 +94,9 @@ func query(h *Hub, js *simplejson.Json) {
 	clientId, _ := js.GetPath("ClientId").String()
 	switch resource {
 	case "getAllServices":
-		getAllServices(h, clientId)
+		go getAllServices(h, clientId)
+	case "getAllStatus":
+		go getAllStatus(h, js)
 	}
 	// go response(h, `"hello world"`)
 }
