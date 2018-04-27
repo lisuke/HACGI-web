@@ -27,6 +27,10 @@
 <body>
     <script type="text/javascript">
     var conn;
+    var currentService = null;
+    var interfaceCreator = new Map();
+    var interfaceInstance = new Map();
+
     window.onload = function () {
         if (window["WebSocket"]) {
             conn = new WebSocket("ws://" + document.location.host + "/ws"
@@ -35,23 +39,41 @@
                 console.log("Connection closed.");
             };
             conn.onopen = function (evt) {
-                init();
+                conn.send('{"reqType":"query","data":{"resource":"getAllServices"}}');
             };
             conn.onmessage = function (evt) {
                 var messages = evt.data;
-                console.log(messages)
+                // console.log(messages)
                     var msg = JSON.parse(messages).Message.data
-                    if (msg.resource === "getAllServices") {
+                    switch (msg.resource) {
+                    case "getAllServices":
                         var src=msg.Message[0][1];
-                        console.log()
                         var arr = [];
                         for (var i = src.length - 1; i >= 0; i--) {
                             arr.push({
                                 serviceName: src[i][1],
                                 serviceType: src[i][0],
+                                objectPath: src[i][2],
                             })
                         }
-                        load(arr)
+                        loadServices(arr)
+                        break;
+                    case "ServiceChanged":
+                        switch(msg.Message.changeType){
+                        case "deleter":
+                            deleteService(msg.Message.serviceName)
+                        break;
+                        case "register":
+                            addService(msg.Message.serviceName,msg.Message.objectPath, msg.Message.serviceType)
+                        break;
+                        }
+                        break;
+                    case "serviceInvoke":
+                        // console.log(msg.Message)
+                        if (msg.Message != null && msg.Message.resource === currentService) {
+                            interfaceInstance.get(msg.Message.ifaceName).reload(msg.Message.ret)
+                        }
+                        break;
                     }
             };
         } else {
@@ -60,28 +82,25 @@
     };
 
 
-        // var arr = [{
-        //         serviceName: "aaa",
-        //         serviceType: "bbb",
-        //     },
-        //     {
-        //         serviceName: "ccc",
-        //         serviceType: "bbb",
-        //     }
-        // ];
+        
+        interfaceCreator.load = function() {
+            interfaceCreator.set("range_selector",createRangeSelector)
+            interfaceCreator.set("switch_interface",createSwitchInterface)
+        };
+        interfaceCreator.load();
+
+        function getInterface(type) {
+            return ["switch_interface", "range_selector"];
+        }
+
         //创建DOM元素
         var ul = document.createElement("ul");
         var panel = document.createElement("div");
-        // init();
 
-        function init() {
-            conn.send('{"reqType":"query","data":{"resource":"getAllServices"}}');
-            // load(arr);
-        }
         //加载DOM
-        function load(arr) {
+        function loadServices(arr) {
             for (var i = 0; i < arr.length; i++) {
-                addService(arr[i].serviceName, arr[i].serviceType);
+                addService(arr[i].serviceName,arr[i].objectPath, arr[i].serviceType);
             }
             panel.className = "panel";
             document.body.appendChild(ul);
@@ -91,10 +110,11 @@
 
         }
 
-        function addService(serviceName, serviceType) {
+        function addService(serviceName, objectPath,serviceType) {
             var li = document.createElement("li");
             li.innerText = serviceName;
             li.serviceType = serviceType;
+            li.objectPath = objectPath;
             ul.appendChild(li);
         }
 
@@ -107,53 +127,113 @@
                     if (panel.serviceName === serviceName){
                         panel.innerHTML = '';
                         panel.serviceName = '';
+                        currentService = null;
+                        interfaceInstance.clear();
                     }
                     return;
                 }
             }
-
         }
+
         //点击事件
         function addEvent() {
             ul.addEventListener("click", function (e) {
                 panel.innerHTML = "";
                 if (e.target.nodeName === "LI") {
+                    currentService =e.target.innerText;
                     panel.serviceName = e.target.innerText;
+                    var serviceType = document.createElement("div");
+                        serviceType.innerHTML="serviceType: " + e.target.serviceType;
+                        panel.appendChild(serviceType)
+                    var serviceName = document.createElement("div");
+                        serviceName.innerHTML="serviceName: " + e.target.innerText;
+                        panel.appendChild(serviceName)
+                    var objectPath = document.createElement("div");
+                        objectPath.innerHTML="objectPath: " + e.target.objectPath;
+                        panel.appendChild(objectPath)
                     var arrInterfaces = getInterface(e.target.serviceType);
                     for (var i = 0; i < arrInterfaces.length; i++) {
                         var interfaceName = arrInterfaces[i];
-                        if (interfaceName === 'switch_interface') {
-                            var interfaceDiv = createSwitchInterface(e.target.innerText);
-                            panel.appendChild(interfaceDiv);
-                            interfaceDiv.init();
-                            interfaceDiv.serviceName = e.target.serviceName;
-                        }
-
+                        var creator = interfaceCreator.get(interfaceName);
+                        var c = creator(e.target.innerText,e.target.objectPath);
+                        panel.appendChild(c);
+                        c.init();
+                        c.serviceName = e.target.serviceName;
+                        interfaceInstance.set(interfaceName, c);
                     }
-
                 }
             });
         }
-        //获取liDOM属性
-        function getInterface(type) {
-            return ["switch_interface", "range_abc"];
-        }
 
-        function createSwitchInterface(serviceName) {
+        function createSwitchInterface(serviceName,objectPath) {
             var div = document.createElement("div");
-            var label = document.createElement("label");
+            var span = document.createElement("span");
             var input = document.createElement("input");
             input.type = "checkbox";
-            div.appendChild(label);
+            div.appendChild(span);
             div.appendChild(input);
             div.init = function () {
                 input.checked = "checked";
-            }
+            };
+            div.reload = function(obj) {
+                console.log(obj.is_on)
+                if(obj.is_on)
+                    input.checked = "checked"
+                else
+                    input.checked = ""
+            };
+            span.innerText="switch:"
             input.onclick = function () {
-                input.checked = "";
-                console.log("aaa");
+                // input.checked = "";
+                var on_off = "off";
+                if(input.checked){
+                    on_off = "on"
+                }
+                conn.send(JSON.stringify({
+                    "reqType":"invoke-remote",
+                    "data":{
+                        "resource":serviceName,
+                        "objectPath":objectPath,
+                        "ifaceName":"switch_interface",
+                        "method":on_off,
+                        "args": '{"args":[],"kwargs":{}}',
+                    }
+                }));
             }
 
+            return div;
+        }
+
+        function createRangeSelector(serviceName,objectPath) {
+            var div = document.createElement("div");
+            var tip = document.createElement("span");
+            var value_tip = document.createElement("span");
+            var input = document.createElement("input");
+            input.type = "range";
+            div.appendChild(tip);
+            div.appendChild(input);
+            div.appendChild(value_tip);
+            div.init = function () {
+                input.max = 100;
+                input.step = 5;
+                input.min = 0;
+            }
+            div.reload = function(obj) {
+                input.value = obj.value;
+            };
+            tip.innerText="range:"
+            input.onchange = function () {
+                conn.send(JSON.stringify({
+                    "reqType":"invoke-remote",
+                    "data":{
+                        "resource":serviceName,
+                        "objectPath":objectPath,
+                        "ifaceName":"range_selector",
+                        "method":"setValue",
+                        "args": '{"args":['+input.value+'],"kwargs":{}}',
+                    }
+                }));
+            }
             return div;
         }
     </script>
