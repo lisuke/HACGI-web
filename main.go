@@ -8,19 +8,6 @@ import (
 
 var addr = flag.String("addr", ":8080", "http service address")
 
-func serveHome(w http.ResponseWriter, r *http.Request) {
-	log.Println(r.URL)
-	if r.URL.Path != "/" {
-		http.Error(w, "Not found", http.StatusNotFound)
-		return
-	}
-	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	http.ServeFile(w, r, "public/home.html")
-}
-
 func serveIndex(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.URL)
 	if r.URL.Path != "/index" {
@@ -41,7 +28,7 @@ func main() {
 	hub := newHub()
 	go hub.run()
 	go dbus_init(hub)
-	// http.HandleFunc("/", serveHome)
+
 	http.HandleFunc("/index", serveIndex)
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(hub, w, r)
