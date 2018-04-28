@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/bitly/go-simplejson"
 	"github.com/godbus/dbus"
@@ -69,4 +70,28 @@ func serviceInvoke(hub *Hub, js *simplejson.Json) {
 	json_str := fmt.Sprintf(`{"resource":"serviceInvoke","Message": {"resource":"%s","ifaceName":"%s","method":"%s","ret":%s}}`, resource, ifaceName, method, ret)
 	// go responseToClientId(hub, json_str, clientId)
 	go responseToAll(hub, json_str)
+}
+
+func getAllStatus(hub *Hub, js *simplejson.Json) {
+	clientId, _ := js.GetPath("ClientId").String()
+	Service, _ := js.GetPath("Message", "data", "Service").String()
+	objectPath, _ := js.GetPath("Message", "data", "objectPath").String()
+
+	conn, err := dbus.SessionBus()
+	if err != nil {
+		panic(err)
+	}
+
+	obj := conn.Object(Service, dbus.ObjectPath(objectPath))
+
+	var ifaces []string
+	obj.Call(Service+".getAllInterfaces", 0).Store(&ifaces)
+	iface_json, _ := json.Marshal(&ifaces)
+
+	var status string
+	obj.Call(Service+".getStatus", 0).Store(&status)
+
+	json_str := fmt.Sprintf(`{"resource":"getAllStatus","Message": {"interfaces":%s,"status":%s}}`, iface_json, status)
+	fmt.Println("json_str:", json_str)
+	go responseToClientId(hub, json_str, clientId)
 }

@@ -28,6 +28,7 @@
     <script type="text/javascript">
     var conn;
     var currentService = null;
+    var currentObjectPath = null;
     var interfaceCreator = new Map();
     var interfaceInstance = new Map();
 
@@ -58,6 +59,25 @@
                         }
                         loadServices(arr)
                         break;
+                    case "getAllStatus":
+
+                        // console.log(msg.Message);
+                        var ifaces = msg.Message.interfaces;
+                        var statuses = msg.Message.status;
+                        for (var i = 0; i < ifaces.length; i++) {
+                            var ifaceName = ifaces[i];
+                            var ifaceStatus = statuses[i];
+                            var creator = interfaceCreator.get(ifaceName);
+
+                            var c = creator(currentService,currentObjectPath);
+                            panel.appendChild(c);
+                            c.init();
+                            c.reload(ifaceStatus);
+                            c.serviceName = currentService;
+                            interfaceInstance.set(ifaceName, c);
+                        }
+
+                    break;
                     case "ServiceChanged":
                         switch(msg.Message.changeType){
                         case "deleter":
@@ -128,6 +148,7 @@
                         panel.innerHTML = '';
                         panel.serviceName = '';
                         currentService = null;
+                        currentObjectPath = null;
                         interfaceInstance.clear();
                     }
                     return;
@@ -141,6 +162,8 @@
                 panel.innerHTML = "";
                 if (e.target.nodeName === "LI") {
                     currentService =e.target.innerText;
+                    currentObjectPath =e.target.objectPath;
+
                     panel.serviceName = e.target.innerText;
                     var serviceType = document.createElement("div");
                         serviceType.innerHTML="serviceType: " + e.target.serviceType;
@@ -151,16 +174,9 @@
                     var objectPath = document.createElement("div");
                         objectPath.innerHTML="objectPath: " + e.target.objectPath;
                         panel.appendChild(objectPath)
-                    var arrInterfaces = getInterface(e.target.serviceType);
-                    for (var i = 0; i < arrInterfaces.length; i++) {
-                        var interfaceName = arrInterfaces[i];
-                        var creator = interfaceCreator.get(interfaceName);
-                        var c = creator(e.target.innerText,e.target.objectPath);
-                        panel.appendChild(c);
-                        c.init();
-                        c.serviceName = e.target.serviceName;
-                        interfaceInstance.set(interfaceName, c);
-                    }
+                    
+                    conn.send('{"reqType":"query","data":{"resource":"getAllStatus","Service":"'+e.target.innerText+'","objectPath":"'+e.target.objectPath+'"}}');
+
                 }
             });
         }
@@ -176,7 +192,7 @@
                 input.checked = "checked";
             };
             div.reload = function(obj) {
-                console.log(obj.is_on)
+                // console.log(obj.is_on)
                 if(obj.is_on)
                     input.checked = "checked"
                 else
