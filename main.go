@@ -31,7 +31,7 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	http.ServeFile(w, r, "public/index.html")
+	http.ServeFile(w, r, "/root/go/src/github.com/lisuke/HACGI-web/public/index.html")
 }
 
 func main() {
